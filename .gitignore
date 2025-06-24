@@ -85,3 +85,6 @@ crashlytics-build.properties
 /[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers.meta
 Sheep n Destroy/UserSettings
 Sheep n Destroy/Library
+Sheep n Destroy/obj/Debug
+Sheep n Destroy/Temp/__Backupscenes
+Sheep n Destroy/Temp
