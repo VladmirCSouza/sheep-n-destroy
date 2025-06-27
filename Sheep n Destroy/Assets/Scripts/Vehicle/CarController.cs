@@ -10,7 +10,8 @@ namespace Vehicle {
         [SerializeField] private Transform _accelerationPoint;
         [SerializeField] private GameObject[] _tiresMesh = new GameObject[4];
         [SerializeField] private GameObject[] _frontTiresParent = new GameObject[2];
-        
+        [SerializeField] private TrailRenderer[] _skidMarks = new TrailRenderer[2];
+        [SerializeField] private ParticleSystem[] _skidSmokes = new ParticleSystem[2];
         
         [Header("Suspension Settings")]
         [SerializeField] private float _springStiffness = 30000f;
@@ -35,6 +36,7 @@ namespace Vehicle {
         [Header("Visuals")]
         [SerializeField] private float _tireRotationSpeed = 3000f;
         [SerializeField] private float _maxStearingAngle = 30f;
+        [SerializeField] private float _minSideSkidVelocity = 10f;
         
         private Vector3 _currentCarLocalVelocity = Vector3.zero;
         private float _carVelocityRatio;
@@ -90,7 +92,7 @@ namespace Vehicle {
                     float netForce = springForce - dampForce;
 
                     tireMeshTargetPosition = hit.point + rayPoint.up * _wheelRadius;
-                    _carRigidbody.AddForceAtPosition(netForce * rayPoint.up, rayPoint.position);
+                    _carRigidbody.AddForceAtPosition(netForce * Vector3.up, rayPoint.position);
 
                     Debug.DrawLine(rayPoint.position, hit.point, Color.red);
                 } else {
@@ -122,9 +124,6 @@ namespace Vehicle {
                 Deceleration();
                 Turn();
                 SidewaysDrag();
-                // ForwardDrag();
-                // TryForceLinearDump();
-                Debug.Log(_carRigidbody.linearVelocity.magnitude);
             }
         }
 
@@ -134,22 +133,6 @@ namespace Vehicle {
 
         private void Deceleration() {
             _carRigidbody.AddForceAtPosition(_deceleration * _moveInput * -transform.forward, _accelerationPoint.position, ForceMode.Acceleration);
-        }
-
-        private void TryForceLinearDump() {
-            if (_carRigidbody.linearVelocity.magnitude <= 0.01f) {
-                _carRigidbody.linearDamping = _linearDampOnRest;
-            } else {
-                _carRigidbody.linearDamping = 0;
-            }
-        }
-        
-        private void ForwardDrag() {
-            float currentForwardSpeed = _currentCarLocalVelocity.z + _carRigidbody.linearVelocity.z;
-            float dragMagnitude = -currentForwardSpeed * _longitudinalDragCoefficient;
-            
-            Vector3 dragForce = transform.forward * dragMagnitude;
-            _carRigidbody.AddForceAtPosition(dragForce, _carRigidbody.worldCenterOfMass, ForceMode.Acceleration);
         }
 
         private void Turn() {
@@ -176,6 +159,33 @@ namespace Vehicle {
 
         private void TiresVisuals() {
             SetTireMeshRotation();
+            Vfx();
+        }
+
+        private void Vfx() {
+            if (_isCarGrounded && Mathf.Abs(_currentCarLocalVelocity.x) > _minSideSkidVelocity) {
+                ToggleSkidMarks(true);
+                ToggleSkidSmokes(true);
+            } else {
+                ToggleSkidMarks(false);
+                ToggleSkidSmokes(false);
+            }
+        }
+
+        private void ToggleSkidMarks(bool toggle) {
+            foreach (var skidMark in _skidMarks) {
+                skidMark.emitting = toggle;
+            }
+        }
+
+        private void ToggleSkidSmokes(bool toggle) {
+            foreach (var skidSmoke in _skidSmokes) {
+                if (toggle) {
+                    skidSmoke.Play();
+                } else {
+                    skidSmoke.Stop();
+                }
+            }
         }
         
         private void SetTireMeshRotation() {
